@@ -1,0 +1,52 @@
+<idea-plugin>
+    <id>com.wooongyee.jvmbaekjoon</id>
+    <name>JvmBaekjoon</name>
+    <vendor email="ys05059@gmail.com" url="https://github.com/wooongyee">JaeWoong Choi</vendor>
+
+    <description><![CDATA[
+    Test your Baekjoon Online Judge (BOJ) solutions directly in IntelliJ IDEA.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+    <depends>org.jetbrains.kotlin</depends>
+
+    <extensions defaultExtensionNs="org.jetbrains.kotlin">
+        <supportsKotlinPluginMode supportsK2="true"/>
+    </extensions>
+
+    <!-- Tool Window 등록 -->
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow
+                id="JvmBaekjoon"
+                anchor="right"
+                icon="AllIcons.Actions.Execute"
+                factoryClass="com.wooongyee.jvmbaekjoon.toolWindow.BojToolWindowFactory"/>
+    </extensions>
+
+    <actions>
+        <!-- 메뉴/우클릭용 액션 (단축키 없음) -->
+        <action id="com.wooongyee.jvmbaekjoon.RunTest"
+                class="com.wooongyee.jvmbaekjoon.actions.RunTestAction"
+                text="Run BOJ Test"
+                description="Run Baekjoon Online Judge test"
+                icon="AllIcons.Actions.Execute">
+
+            <add-to-group group-id="ToolsMenu" anchor="first"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="RunClass"/>
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="RunClass"/>
+        </action>
+
+        <!-- 에디터 단축키 전용 액션 -->
+        <action id="com.wooongyee.jvmbaekjoon.RunTestEditor"
+                class="com.wooongyee.jvmbaekjoon.actions.RunTestEditorAction"
+                text="Run BOJ Test"
+                description="Run Baekjoon Online Judge test (Keyboard Shortcut)">
+
+            <!-- 에디터 포커스 시에만 작동하는 단축키 -->
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta shift J"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta shift J"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift J"/>
+        </action>
+    </actions>
+</idea-plugin>
