@@ -1,0 +1,25 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Kotlin files
+*.kt text diff=kotlin
+
+# Gradle files
+*.gradle text diff=java
+*.gradle.kts text diff=kotlin
+
+# XML files (plugin.xml 등)
+*.xml text
+
+# Markdown
+*.md text
+
+# Binary files that might be in project
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+
+# Gradle wrapper jar (should be committed)
+gradle-wrapper.jar binary
