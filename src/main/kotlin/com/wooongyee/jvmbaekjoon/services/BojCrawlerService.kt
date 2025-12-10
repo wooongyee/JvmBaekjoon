@@ -1,59 +1,77 @@
 package com.wooongyee.jvmbaekjoon.services
 
+import com.wooongyee.jvmbaekjoon.model.BojProblem
+import com.wooongyee.jvmbaekjoon.model.ProblemSearchResult
+import com.wooongyee.jvmbaekjoon.model.ProblemStats
+import com.wooongyee.jvmbaekjoon.model.TestCase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-
-data class BojProblem(
-    val number: String,
-    val title: String,
-    val description: String,
-    val input: String,
-    val output: String,
-    val testCases: List<TestCase>,
-    val stats: ProblemStats
-)
-
-data class TestCase(
-    val input: String,
-    val output: String
-)
-
-data class ProblemStats(
-    val timeLimit: String,
-    val memoryLimit: String,
-    val submitCount: String,
-    val correctCount: String,
-    val acceptedUserCount: String,
-    val correctRate: String
-)
 
 object BojCrawlerService {
 
     private const val BOJ_URL = "https://www.acmicpc.net/problem/"
+    private const val BOJ_SEARCH_URL = "https://www.acmicpc.net/problemset"
     private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
-    suspend fun fetchProblem(problemNumber: String): Result<BojProblem> {
-        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                println("🔍 [BojCrawler] 시작: 문제 ${problemNumber}")
+    /**
+     * 문제 제목으로 검색
+     */
+    suspend fun searchProblem(keyword: String): Result<List<ProblemSearchResult>> = withContext(Dispatchers.IO) {
+        try {
+            println("🔍 [BojCrawler] 검색: $keyword")
 
-                val url = "$BOJ_URL$problemNumber"
-                val doc = Jsoup.connect(url)
-                    .userAgent(USER_AGENT)
-                    .referrer("https://www.acmicpc.net/")
-                    .timeout(10000)
-                    .get()
+            // URL 인코딩된 검색어로 GET 요청 (공백은 %20으로)
+            val encodedKeyword = java.net.URLEncoder.encode(keyword, "UTF-8").replace("+", "%20")
+            val searchUrl = "$BOJ_SEARCH_URL?search=$encodedKeyword"
 
-                println("✅ [BojCrawler] HTTP 요청 완료")
+            val doc = Jsoup.connect(searchUrl)
+                .userAgent(USER_AGENT)
+                .referrer("https://www.acmicpc.net/")
+                .timeout(10000)
+                .get()
 
-                val problem = parseProblem(doc, problemNumber)
-                println("✅ [BojCrawler] 파싱 완료: ${problem.title}")
-
-                Result.success(problem)
-            } catch (e: Exception) {
-                println("❌ [BojCrawler] 에러: ${e.message}")
-                Result.failure(e)
+            // 문제 목록 테이블 파싱
+            val results = doc.select("#problemset tbody tr").mapNotNull { row ->
+                val cols = row.select("td")
+                if (cols.size >= 2) {
+                    val number = cols[0].text().trim()
+                    val title = cols[1].select("a").text().trim()
+                    if (number.isNotEmpty() && title.isNotEmpty()) {
+                        ProblemSearchResult(number = number, title = title)
+                    } else null
+                } else null
             }
+
+            println("✅ [BojCrawler] 검색 결과: ${results.size}개")
+            Result.success(results)
+        } catch (e: Exception) {
+            println("❌ [BojCrawler] 검색 에러: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun fetchProblem(problemNumber: String): Result<BojProblem> = withContext(Dispatchers.IO) {
+        try {
+            println("🔍 [BojCrawler] 시작: 문제 ${problemNumber}")
+
+            val url = "$BOJ_URL$problemNumber"
+            val doc = Jsoup.connect(url)
+                .userAgent(USER_AGENT)
+                .referrer("https://www.acmicpc.net/")
+                .timeout(10000)
+                .get()
+
+            println("✅ [BojCrawler] HTTP 요청 완료")
+
+            val problem = parseProblem(doc, problemNumber)
+            println("✅ [BojCrawler] 파싱 완료: ${problem.title}")
+
+            Result.success(problem)
+        } catch (e: Exception) {
+            println("❌ [BojCrawler] 에러: ${e.message}")
+            Result.failure(e)
         }
     }
 
