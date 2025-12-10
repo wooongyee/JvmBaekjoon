@@ -4,7 +4,7 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
-import com.wooongyee.jvmbaekjoon.services.ProblemStats
+import com.wooongyee.jvmbaekjoon.model.ProblemStats
 import java.awt.*
 import javax.swing.*
 import javax.swing.table.DefaultTableCellRenderer

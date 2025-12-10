@@ -3,7 +3,7 @@ package com.wooongyee.jvmbaekjoon.toolWindow.components
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.ui.JBColor
-import com.wooongyee.jvmbaekjoon.services.BojProblem
+import com.wooongyee.jvmbaekjoon.model.BojProblem
 import java.awt.*
 import javax.swing.JButton
 import javax.swing.JLabel

@@ -1,7 +1,7 @@
 package com.wooongyee.jvmbaekjoon.toolWindow.components
 
 import com.intellij.ui.JBColor
-import com.wooongyee.jvmbaekjoon.services.TestCase
+import com.wooongyee.jvmbaekjoon.model.TestCase
 import java.awt.Component
 import java.awt.Dimension
 import javax.swing.Box

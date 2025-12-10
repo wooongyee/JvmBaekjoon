@@ -11,11 +11,14 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.*
 import com.intellij.util.ui.JBUI
+import com.wooongyee.jvmbaekjoon.model.BojProblem
+import com.wooongyee.jvmbaekjoon.model.ProblemSearchResult
+import com.wooongyee.jvmbaekjoon.model.TestCase
 import com.wooongyee.jvmbaekjoon.services.BojCrawlerService
-import com.wooongyee.jvmbaekjoon.services.BojProblem
-import com.wooongyee.jvmbaekjoon.services.TestCase
+import com.wooongyee.jvmbaekjoon.services.BojProblemService
 import com.wooongyee.jvmbaekjoon.toolWindow.components.ProblemHeaderPanel
 import com.wooongyee.jvmbaekjoon.toolWindow.components.ProblemStatsPanel
+import com.wooongyee.jvmbaekjoon.toolWindow.components.SearchResultListPanel
 import com.wooongyee.jvmbaekjoon.toolWindow.components.TestCasePanel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,8 +29,9 @@ import javax.swing.*
 
 class BojToolWindowContent(private val project: Project) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val problemService = BojProblemService()
 
-    private lateinit var problemNumberField: JBTextField
+    private lateinit var inputField: JBTextField
     private var currentProblem: BojProblem? = null
     private lateinit var mainPanel: JPanel
     private lateinit var contentScrollPane: JBScrollPane
@@ -41,17 +45,17 @@ class BojToolWindowContent(private val project: Project) {
 
         mainPanel = panel {
             row {
-                label("문제 번호:")
+                label("문제 번호/제목:")
 
                 textField()
-                    .columns(10)
+                    .columns(15)
                     .applyToComponent {
-                        problemNumberField = this
-                        addActionListener { loadProblem() }
+                        inputField = this
+                        addActionListener { loadOrSearchProblem() }
                     }
 
-                cell(JButton("로드").apply {
-                    addActionListener { loadProblem() }
+                cell(JButton("검색").apply {
+                    addActionListener { loadOrSearchProblem() }
                 })
             }
 
@@ -73,7 +77,7 @@ class BojToolWindowContent(private val project: Project) {
             background = JBColor.background()
         }
 
-        val label = JLabel("문제 번호를 입력하고 '로드' 버튼을 눌러주세요").apply {
+        val label = JLabel("문제 번호 또는 제목을 입력하세요").apply {
             foreground = JBColor.GRAY
             font = font.deriveFont(Font.PLAIN, 15f)
             horizontalAlignment = SwingConstants.CENTER
@@ -84,19 +88,44 @@ class BojToolWindowContent(private val project: Project) {
         contentScrollPane.setViewportView(welcomePanel)
     }
 
-    private fun loadProblem() {
-        val number = problemNumberField.text.trim()
+    private fun loadOrSearchProblem() {
+        val input = inputField.text.trim()
 
-        if (number.isEmpty()) {
+        if (input.isEmpty()) {
             JOptionPane.showMessageDialog(
                 mainPanel,
-                "문제 번호를 입력해주세요",
+                "문제 번호 또는 제목을 입력해주세요",
                 "입력 오류",
                 JOptionPane.WARNING_MESSAGE
             )
             return
         }
 
+        showLoadingMessage()
+
+        scope.launch {
+            when (val result = problemService.loadOrSearch(input)) {
+                is BojProblemService.SearchResult.SingleProblem -> {
+                    currentProblem = result.problem
+                    displayProblem(result.problem)
+                }
+                is BojProblemService.SearchResult.MultipleResults -> {
+                    displaySearchResults(result.results)
+                }
+                is BojProblemService.SearchResult.NotFound -> {
+                    showNotFoundMessage(result.message)
+                }
+                is BojProblemService.SearchResult.Error -> {
+                    showErrorMessage(result.message)
+                }
+            }
+        }
+    }
+
+    /**
+     * 특정 문제 번호로 직접 로드
+     */
+    private fun loadProblemByNumber(number: String) {
         showLoadingMessage()
 
         scope.launch {
@@ -130,7 +159,7 @@ class BojToolWindowContent(private val project: Project) {
         }
         loadingPanel.add(progressBar, gbc)
 
-        val label = JLabel("문제를 불러오는 중...").apply {
+        val label = JLabel("검색 중...").apply {
             foreground = JBColor.GRAY
             font = font.deriveFont(Font.PLAIN, 14f)
             horizontalAlignment = SwingConstants.CENTER
@@ -142,16 +171,43 @@ class BojToolWindowContent(private val project: Project) {
     }
 
     private fun showErrorMessage(message: String) {
-        val errorPanel = panel {
-            row {
-                label("오류: $message")
-                    .applyToComponent {
-                        foreground = JBColor.RED
-                        horizontalAlignment = SwingConstants.CENTER
-                    }
-            }.resizableRow()
+        val errorPanel = JPanel(GridBagLayout()).apply {
+            background = JBColor.background()
         }
+
+        val label = JLabel("오류: $message").apply {
+            foreground = JBColor.RED
+            font = font.deriveFont(Font.PLAIN, 14f)
+            horizontalAlignment = SwingConstants.CENTER
+        }
+
+        errorPanel.add(label)
         contentScrollPane.setViewportView(errorPanel)
+    }
+
+    private fun showNotFoundMessage(message: String) {
+        val notFoundPanel = JPanel(GridBagLayout()).apply {
+            background = JBColor.background()
+        }
+
+        val label = JLabel(message).apply {
+            foreground = JBColor.GRAY
+            font = font.deriveFont(Font.PLAIN, 14f)
+            horizontalAlignment = SwingConstants.CENTER
+        }
+
+        notFoundPanel.add(label)
+        contentScrollPane.setViewportView(notFoundPanel)
+    }
+
+    /**
+     * 검색 결과 목록 표시 (컴포넌트 사용)
+     */
+    private fun displaySearchResults(results: List<ProblemSearchResult>) {
+        val panel = SearchResultListPanel.create(results) { number ->
+            loadProblemByNumber(number)
+        }
+        contentScrollPane.setViewportView(panel)
     }
 
     private fun displayProblem(problem: BojProblem) {
