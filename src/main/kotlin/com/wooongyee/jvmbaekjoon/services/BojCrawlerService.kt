@@ -22,6 +22,9 @@ object BojCrawlerService {
         try {
             println("🔍 [BojCrawler] 검색: $keyword")
 
+            // 공백 제거한 키워드 (비교용)
+            val normalizedKeyword = keyword.replace(" ", "").lowercase()
+
             // URL 인코딩된 검색어로 GET 요청 (공백은 %20으로)
             val encodedKeyword = java.net.URLEncoder.encode(keyword, "UTF-8").replace("+", "%20")
             val searchUrl = "$BOJ_SEARCH_URL?search=$encodedKeyword"
@@ -42,6 +45,9 @@ object BojCrawlerService {
                         ProblemSearchResult(number = number, title = title)
                     } else null
                 } else null
+            }.filter { result ->
+                // 제목에 키워드가 포함된 것만 (공백 무시)
+                result.title.replace(" ", "").lowercase().contains(normalizedKeyword)
             }
 
             println("✅ [BojCrawler] 검색 결과: ${results.size}개")

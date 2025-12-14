@@ -11,7 +11,7 @@ import javax.swing.JPanel
 
 object ProblemHeaderPanel {
 
-    fun create(problem: BojProblem): JPanel {
+    fun create(problem: BojProblem, onSubmit: () -> Unit): JPanel {
         return JPanel(BorderLayout()).apply {
             background = JBColor.background()
 
@@ -21,13 +21,27 @@ object ProblemHeaderPanel {
             }
             add(titleLabel, BorderLayout.WEST)
 
-            // 링크 버튼
-            val linkButton = createLinkButton(problem.number)
-            val buttonWrapper = JPanel(FlowLayout(FlowLayout.RIGHT, 0, 0)).apply {
+            // 버튼들 (제출, 링크)
+            val buttonWrapper = JPanel(FlowLayout(FlowLayout.RIGHT, 5, 0)).apply {
                 background = JBColor.background()
-                add(linkButton)
+                add(createSubmitButton(onSubmit))
+                add(createLinkButton(problem.number))
             }
             add(buttonWrapper, BorderLayout.EAST)
+        }
+    }
+
+    private fun createSubmitButton(onSubmit: () -> Unit): JButton {
+        return JButton(AllIcons.Actions.Upload).apply {
+            toolTipText = "BOJ에 제출하기"
+            isBorderPainted = false
+            isContentAreaFilled = false
+            isFocusPainted = false
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            preferredSize = Dimension(24, 24)
+            maximumSize = Dimension(24, 24)
+            minimumSize = Dimension(24, 24)
+            addActionListener { onSubmit() }
         }
     }
 
