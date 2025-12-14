@@ -20,7 +20,6 @@ import com.intellij.util.ui.JBUI
 import com.wooongyee.jvmbaekjoon.model.BojProblem
 import com.wooongyee.jvmbaekjoon.model.ProblemSearchResult
 import com.wooongyee.jvmbaekjoon.model.TestCase
-import com.wooongyee.jvmbaekjoon.services.BojCrawlerService
 import com.wooongyee.jvmbaekjoon.services.BojProblemService
 import com.wooongyee.jvmbaekjoon.services.BojTestService
 import com.wooongyee.jvmbaekjoon.toolWindow.components.ProblemHeaderPanel
@@ -108,6 +107,11 @@ class BojToolWindowContent(private val project: Project) {
             return
         }
 
+        // 이미 같은 문제가 표시되어 있으면 중복 검색 방지
+        if (currentProblem != null && input == currentProblem!!.number) {
+            return
+        }
+
         showLoadingMessage()
 
         scope.launch {
@@ -117,12 +121,15 @@ class BojToolWindowContent(private val project: Project) {
                     displayProblem(result.problem)
                 }
                 is BojProblemService.SearchResult.MultipleResults -> {
+                    currentProblem = null
                     displaySearchResults(result.results)
                 }
                 is BojProblemService.SearchResult.NotFound -> {
+                    currentProblem = null
                     showNotFoundMessage(result.message)
                 }
                 is BojProblemService.SearchResult.Error -> {
+                    currentProblem = null
                     showErrorMessage(result.message)
                 }
             }
@@ -136,13 +143,20 @@ class BojToolWindowContent(private val project: Project) {
         showLoadingMessage()
 
         scope.launch {
-            val result = BojCrawlerService.fetchProblem(number)
-
-            result.onSuccess { problem ->
-                currentProblem = problem
-                displayProblem(problem)
-            }.onFailure { error ->
-                showErrorMessage(error.message ?: "알 수 없는 오류")
+            when (val result = problemService.loadOrSearch(number)) {
+                is BojProblemService.SearchResult.SingleProblem -> {
+                    currentProblem = result.problem
+                    displayProblem(result.problem)
+                }
+                is BojProblemService.SearchResult.NotFound -> {
+                    showNotFoundMessage(result.message)
+                }
+                is BojProblemService.SearchResult.Error -> {
+                    showErrorMessage(result.message)
+                }
+                else -> {
+                    showErrorMessage("문제를 불러올 수 없습니다")
+                }
             }
         }
     }

@@ -10,6 +10,14 @@ class BojProblemService {
 
     companion object {
         private const val MAX_RESULTS = 50
+        private const val CACHE_SIZE = 10
+    }
+
+    // LRU 캐시 (최대 10개 문제)
+    private val problemCache = object : LinkedHashMap<String, BojProblem>(CACHE_SIZE, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, BojProblem>?): Boolean {
+            return size > CACHE_SIZE
+        }
     }
 
     /**
@@ -31,10 +39,20 @@ class BojProblemService {
      * 문제 번호로 직접 로드
      */
     private suspend fun loadByNumber(number: String): SearchResult {
+        // 캐시 확인
+        problemCache[number]?.let {
+            return SearchResult.SingleProblem(it)
+        }
+
+        // 캐시에 없으면 크롤링
         val result = BojCrawlerService.fetchProblem(number)
 
         return result.fold(
-            onSuccess = { SearchResult.SingleProblem(it) },
+            onSuccess = { problem ->
+                // 캐시에 저장
+                problemCache[number] = problem
+                SearchResult.SingleProblem(problem)
+            },
             onFailure = { SearchResult.NotFound("문제 $number 를 찾을 수 없습니다") }
         )
     }
@@ -50,12 +68,8 @@ class BojProblemService {
                 when {
                     results.isEmpty() -> SearchResult.NotFound("'$keyword' 검색 결과가 없습니다")
                     results.size == 1 -> {
-                        // 결과가 1개면 바로 문제 로드
-                        val problem = BojCrawlerService.fetchProblem(results[0].number)
-                        problem.fold(
-                            onSuccess = { SearchResult.SingleProblem(it) },
-                            onFailure = { SearchResult.Error(it.message ?: "문제 로드 실패") }
-                        )
+                        // 결과가 1개면 바로 문제 로드 (캐시 활용)
+                        loadByNumber(results[0].number)
                     }
                     else -> {
                         // 정렬 후 최대 50개 제한
