@@ -1,10 +1,16 @@
 package com.wooongyee.jvmbaekjoon.toolWindow
 
 import com.intellij.icons.AllIcons
+import com.intellij.ide.BrowserUtil
+import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageType
+import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import java.awt.datatransfer.StringSelection
 import com.intellij.ui.JBColor
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBScrollPane
@@ -16,6 +22,7 @@ import com.wooongyee.jvmbaekjoon.model.ProblemSearchResult
 import com.wooongyee.jvmbaekjoon.model.TestCase
 import com.wooongyee.jvmbaekjoon.services.BojCrawlerService
 import com.wooongyee.jvmbaekjoon.services.BojProblemService
+import com.wooongyee.jvmbaekjoon.services.BojTestService
 import com.wooongyee.jvmbaekjoon.toolWindow.components.ProblemHeaderPanel
 import com.wooongyee.jvmbaekjoon.toolWindow.components.ProblemStatsPanel
 import com.wooongyee.jvmbaekjoon.toolWindow.components.SearchResultListPanel
@@ -211,6 +218,9 @@ class BojToolWindowContent(private val project: Project) {
     }
 
     private fun displayProblem(problem: BojProblem) {
+        // BojTestService에 현재 테스트케이스 저장
+        BojTestService.setCurrentTestCases(problem.testCases)
+
         val wrapper = JPanel(BorderLayout()).apply {
             border = JBUI.Borders.empty(10)
         }
@@ -218,7 +228,9 @@ class BojToolWindowContent(private val project: Project) {
         val problemPanel = panel {
             // 문제 헤더 (컴포넌트 사용)
             row {
-                cell(ProblemHeaderPanel.create(problem))
+                cell(ProblemHeaderPanel.create(problem) {
+                    onSubmitProblem(problem)
+                })
                     .align(Align.FILL)
             }
 
@@ -285,11 +297,9 @@ class BojToolWindowContent(private val project: Project) {
             // 테스트 케이스
             if (problem.testCases.isNotEmpty()) {
                 row {
-                    label("테스트 케이스")
-                        .bold()
-                        .applyToComponent {
-                            font = font.deriveFont(Font.BOLD, 14f)
-                        }
+                    cell(createTestCaseHeader("테스트 케이스", isTitle = true) {
+                        onRunAllTestCases(problem.testCases)
+                    })
                 }.topGap(TopGap.MEDIUM)
 
                 row {
@@ -299,8 +309,8 @@ class BojToolWindowContent(private val project: Project) {
                 problem.testCases.forEachIndexed { index, testCase ->
                     // 헤더 (예제 번호 + 실행 버튼)
                     row {
-                        cell(createTestCaseHeader(index + 1) {
-                            onRunTestCase(index + 1, testCase)
+                        cell(createTestCaseHeader("예제 ${index + 1}") {
+                            onRunTestCase(index, testCase)
                         })
                     }.topGap(TopGap.SMALL)
 
@@ -326,14 +336,18 @@ class BojToolWindowContent(private val project: Project) {
         contentScrollPane.setViewportView(wrapper)
     }
 
-    private fun createTestCaseHeader(number: Int, onRun: () -> Unit): JPanel {
+    private fun createTestCaseHeader(text: String, isTitle: Boolean = false, onRun: () -> Unit): JPanel {
         return JPanel(FlowLayout(FlowLayout.LEFT, 5, 0)).apply {
             background = JBColor.background()
 
-            add(JLabel("예제 $number"))
+            add(JLabel(text).apply {
+                if (isTitle) {
+                    font = font.deriveFont(Font.BOLD, 14f)
+                }
+            })
 
             add(JButton(AllIcons.Actions.Execute).apply {
-                toolTipText = "실행"
+                toolTipText = if (isTitle) "모든 테스트케이스 실행" else "실행"
                 isBorderPainted = false
                 isContentAreaFilled = false
                 isFocusPainted = false
@@ -373,12 +387,115 @@ class BojToolWindowContent(private val project: Project) {
             )
     }
 
-    private fun onRunTestCase(number: Int, testCase: TestCase) {
-        JOptionPane.showMessageDialog(
-            mainPanel,
-            "테스트 케이스 $number 실행\n(다음 단계에서 구현)",
-            "실행",
-            JOptionPane.INFORMATION_MESSAGE
-        )
+    private fun onRunTestCase(index: Int, testCase: TestCase) {
+        // 현재 열린 파일 가져오기
+        val file = FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
+
+        if (file == null) {
+            Messages.showMessageDialog(
+                project,
+                "열린 파일이 없습니다.\nKotlin 또는 Java 파일을 열어주세요.",
+                "Run BOJ Test",
+                Messages.getWarningIcon()
+            )
+            return
+        }
+
+        if (!BojTestService.isSupportedFile(file)) {
+            Messages.showMessageDialog(
+                project,
+                "Kotlin 또는 Java 파일만 실행할 수 있습니다.",
+                "Run BOJ Test",
+                Messages.getWarningIcon()
+            )
+            return
+        }
+
+        // 파일 저장 (수정 중인 내용 반영)
+        FileDocumentManager.getInstance().saveAllDocuments()
+
+        // 개별 테스트케이스 실행
+        BojTestService.runSingleTestCase(project, file, testCase, index)
+    }
+
+    private fun onRunAllTestCases(testCases: List<TestCase>) {
+        // 현재 열린 파일 가져오기
+        val file = FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
+
+        if (file == null) {
+            Messages.showMessageDialog(
+                project,
+                "열린 파일이 없습니다.\nKotlin 또는 Java 파일을 열어주세요.",
+                "Run BOJ Test",
+                Messages.getWarningIcon()
+            )
+            return
+        }
+
+        if (!BojTestService.isSupportedFile(file)) {
+            Messages.showMessageDialog(
+                project,
+                "Kotlin 또는 Java 파일만 실행할 수 있습니다.",
+                "Run BOJ Test",
+                Messages.getWarningIcon()
+            )
+            return
+        }
+
+        // 파일 저장 (수정 중인 내용 반영)
+        FileDocumentManager.getInstance().saveAllDocuments()
+
+        // 전체 테스트케이스 실행
+        BojTestService.runTestWithCases(project, file, testCases)
+    }
+
+    private fun onSubmitProblem(problem: BojProblem) {
+        // 현재 열린 파일 가져오기
+        val file = FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
+
+        if (file == null) {
+            Messages.showMessageDialog(
+                project,
+                "열린 파일이 없습니다.\n제출할 코드를 먼저 열어주세요.",
+                "BOJ 제출",
+                Messages.getWarningIcon()
+            )
+            return
+        }
+
+        try {
+            // 파일 저장 (수정 중인 내용 반영)
+            FileDocumentManager.getInstance().saveAllDocuments()
+
+            // 파일 내용 읽기
+            val code = String(file.contentsToByteArray(), file.charset)
+
+            // 클립보드에 복사
+            CopyPasteManager.getInstance().setContents(StringSelection(code))
+
+            // 제출 페이지 열기
+            BrowserUtil.browse("https://www.acmicpc.net/submit/${problem.number}")
+
+            // 성공 메시지
+            JBPopupFactory.getInstance()
+                .createHtmlTextBalloonBuilder(
+                    "코드가 클립보드에 복사되었습니다.<br>제출 페이지로 이동합니다.",
+                    MessageType.INFO,
+                    null
+                )
+                .setFadeoutTime(2000)
+                .createBalloon()
+                .show(
+                    RelativePoint.getCenterOf(mainPanel),
+                    Balloon.Position.above
+                )
+        } catch (e: Exception) {
+            Messages.showMessageDialog(
+                project,
+                "코드를 읽는 중 오류가 발생했습니다.\n${e.message}",
+                "BOJ 제출",
+                Messages.getErrorIcon()
+            )
+        }
     }
 }
