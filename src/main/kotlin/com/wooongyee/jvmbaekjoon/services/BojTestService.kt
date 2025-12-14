@@ -93,13 +93,8 @@ object BojTestService {
                     val results = mutableListOf<TestResult>()
 
                     testCases.forEachIndexed { index, testCase ->
-                        ApplicationManager.getApplication().invokeLater {
-                            console.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", ConsoleViewContentType.NORMAL_OUTPUT)
-                            console.print("예제 ${index + 1} / ${testCases.size}\n", ConsoleViewContentType.NORMAL_OUTPUT)
-                            console.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", ConsoleViewContentType.NORMAL_OUTPUT)
-                        }
-
                         val result = CodeExecutorService.execute(
+                            project = project,
                             outputPath = compileResult.outputPath!!,
                             className = compileResult.className!!,
                             input = testCase.input
@@ -110,21 +105,30 @@ object BojTestService {
                         val passed = actualOutput == expectedOutput && !result.timedOut
 
                         ApplicationManager.getApplication().invokeLater {
+                            console.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", ConsoleViewContentType.NORMAL_OUTPUT)
+                            console.print("예제 ${index + 1}\n", ConsoleViewContentType.NORMAL_OUTPUT)
+
                             // 결과 출력
                             when {
                                 result.timedOut -> {
                                     console.print("⏱️ 시간 초과", ConsoleViewContentType.ERROR_OUTPUT)
-                                    console.print(" (${result.executionTimeMs}ms)\n\n", ConsoleViewContentType.NORMAL_OUTPUT)
+                                    console.print(" (${result.executionTimeMs}ms)\n", ConsoleViewContentType.NORMAL_OUTPUT)
                                 }
                                 passed -> {
                                     console.print("✅ 정답", ConsoleViewContentType.SYSTEM_OUTPUT)
-                                    console.print(" (${result.executionTimeMs}ms)\n\n", ConsoleViewContentType.NORMAL_OUTPUT)
+                                    console.print(" (${result.executionTimeMs}ms)\n", ConsoleViewContentType.NORMAL_OUTPUT)
                                 }
                                 else -> {
                                     console.print("❌ 오답", ConsoleViewContentType.ERROR_OUTPUT)
-                                    console.print(" (${result.executionTimeMs}ms)\n\n", ConsoleViewContentType.NORMAL_OUTPUT)
-                                    console.print("$actualOutput\n\n", ConsoleViewContentType.ERROR_OUTPUT)
+                                    console.print(" (${result.executionTimeMs}ms)\n", ConsoleViewContentType.NORMAL_OUTPUT)
                                 }
+                            }
+
+                            console.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", ConsoleViewContentType.NORMAL_OUTPUT)
+
+                            // 오답이면 실제 출력 표시
+                            if (!passed && !result.timedOut) {
+                                console.print("$actualOutput\n\n", ConsoleViewContentType.ERROR_OUTPUT)
                             }
 
                             if (result.error.isNotEmpty()) {
@@ -182,6 +186,7 @@ object BojTestService {
 
                 // 단일 테스트케이스 실행
                 val result = CodeExecutorService.execute(
+                    project = project,
                     outputPath = compileResult.outputPath!!,
                     className = compileResult.className!!,
                     input = testCase.input
@@ -194,22 +199,27 @@ object BojTestService {
                 // 결과 및 실행 시간 먼저 표시
                 console.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", ConsoleViewContentType.NORMAL_OUTPUT)
                 console.print("예제 ${index + 1}\n", ConsoleViewContentType.NORMAL_OUTPUT)
-                console.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", ConsoleViewContentType.NORMAL_OUTPUT)
 
                 when {
                     result.timedOut -> {
                         console.print("⏱️ 시간 초과", ConsoleViewContentType.ERROR_OUTPUT)
-                        console.print(" (${result.executionTimeMs}ms)\n\n", ConsoleViewContentType.NORMAL_OUTPUT)
+                        console.print(" (${result.executionTimeMs}ms)\n", ConsoleViewContentType.NORMAL_OUTPUT)
                     }
                     passed -> {
                         console.print("✅ 정답", ConsoleViewContentType.SYSTEM_OUTPUT)
-                        console.print(" (${result.executionTimeMs}ms)\n\n", ConsoleViewContentType.NORMAL_OUTPUT)
+                        console.print(" (${result.executionTimeMs}ms)\n", ConsoleViewContentType.NORMAL_OUTPUT)
                     }
                     else -> {
                         console.print("❌ 오답", ConsoleViewContentType.ERROR_OUTPUT)
-                        console.print(" (${result.executionTimeMs}ms)\n\n", ConsoleViewContentType.NORMAL_OUTPUT)
-                        console.print("$actualOutput\n\n", ConsoleViewContentType.ERROR_OUTPUT)
+                        console.print(" (${result.executionTimeMs}ms)\n", ConsoleViewContentType.NORMAL_OUTPUT)
                     }
+                }
+
+                console.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", ConsoleViewContentType.NORMAL_OUTPUT)
+
+                // 오답이면 실제 출력 표시
+                if (!passed && !result.timedOut) {
+                    console.print("$actualOutput\n\n", ConsoleViewContentType.ERROR_OUTPUT)
                 }
 
                 // 에러가 있으면 표시
@@ -229,9 +239,8 @@ object BojTestService {
         val totalCount = results.size
         val totalTime = results.sumOf { it.executionTimeMs }
 
-        console.print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", ConsoleViewContentType.NORMAL_OUTPUT)
+        console.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", ConsoleViewContentType.NORMAL_OUTPUT)
         console.print("📊 결과 요약\n", ConsoleViewContentType.NORMAL_OUTPUT)
-        console.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n", ConsoleViewContentType.NORMAL_OUTPUT)
 
         if (passedCount == totalCount) {
             console.print("🎉 All Passed! ", ConsoleViewContentType.SYSTEM_OUTPUT)
@@ -240,7 +249,8 @@ object BojTestService {
             console.print("$passedCount / $totalCount 통과\n", ConsoleViewContentType.ERROR_OUTPUT)
         }
 
-        console.print("총 실행 시간: ${totalTime}ms\n\n", ConsoleViewContentType.NORMAL_OUTPUT)
+        console.print("총 실행 시간: ${totalTime}ms\n", ConsoleViewContentType.NORMAL_OUTPUT)
+        console.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", ConsoleViewContentType.NORMAL_OUTPUT)
     }
 
     /**
