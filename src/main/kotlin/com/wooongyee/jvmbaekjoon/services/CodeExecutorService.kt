@@ -7,12 +7,17 @@ import com.intellij.openapi.compiler.CompilerManager
 import com.intellij.openapi.compiler.CompilerMessageCategory
 import com.intellij.openapi.module.ModuleUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.projectRoots.JavaSdk
 import com.intellij.openapi.roots.CompilerModuleExtension
+import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
 import com.wooongyee.jvmbaekjoon.model.CompileResult
 import com.wooongyee.jvmbaekjoon.model.ExecutionResult
+import com.wooongyee.jvmbaekjoon.settings.JvmBaekjoonSettings
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
@@ -22,9 +27,120 @@ object CodeExecutorService {
     private const val MAX_OUTPUT_LENGTH = 10000 // 최대 출력 길이
 
     /**
-     * 파일 컴파일 (IntelliJ 내부 API 사용)
+     * 파일 컴파일 (설정된 경로가 있으면 직접 컴파일러 호출, 없으면 IntelliJ 내부 API 사용)
      */
     fun compile(project: Project, file: VirtualFile): CompletableFuture<CompileResult> {
+        val settings = JvmBaekjoonSettings.getInstance()
+        val jdkPath = settings.state.jdkPath
+        val kotlinCompilerPath = settings.state.kotlinCompilerPath
+
+        // 설정된 경로가 있으면 직접 컴파일러 호출
+        if (jdkPath.isNotEmpty() || kotlinCompilerPath.isNotEmpty()) {
+            return compileDirectly(project, file, jdkPath, kotlinCompilerPath)
+        }
+
+        // 설정이 없으면 기존 IntelliJ CompilerManager 사용
+        return compileWithIntelliJ(project, file)
+    }
+
+    /**
+     * 직접 컴파일러 호출 (javac/kotlinc)
+     */
+    private fun compileDirectly(
+        project: Project,
+        file: VirtualFile,
+        jdkPath: String,
+        kotlinCompilerPath: String
+    ): CompletableFuture<CompileResult> {
+        val future = CompletableFuture<CompileResult>()
+
+        Thread {
+            try {
+                val sourceFile = File(file.path)
+                val className = extractClassName(project, file)
+
+                // 임시 출력 디렉토리 생성
+                val tempDir = Files.createTempDirectory("jvmbaekjoon-compile").toFile()
+                tempDir.deleteOnExit()
+
+                val compileResult = when (file.extension) {
+                    "java" -> compileJava(sourceFile, tempDir, jdkPath)
+                    "kt" -> compileKotlin(sourceFile, tempDir, kotlinCompilerPath)
+                    else -> {
+                        future.complete(CompileResult(false, null, null, "지원하지 않는 파일 형식입니다."))
+                        return@Thread
+                    }
+                }
+
+                if (compileResult.success) {
+                    future.complete(CompileResult(true, tempDir.absolutePath, className, null))
+                } else {
+                    future.complete(compileResult)
+                }
+            } catch (e: Exception) {
+                future.complete(CompileResult(false, null, null, "컴파일 오류: ${e.message}"))
+            }
+        }.start()
+
+        return future
+    }
+
+    /**
+     * Java 파일 컴파일
+     */
+    private fun compileJava(sourceFile: File, outputDir: File, jdkPath: String): CompileResult {
+        val javacPath = if (jdkPath.isNotEmpty()) {
+            Paths.get(jdkPath, "bin", "javac").toString()
+        } else {
+            "javac"
+        }
+
+        val processBuilder = ProcessBuilder(
+            javacPath,
+            "-d", outputDir.absolutePath,
+            sourceFile.absolutePath
+        )
+
+        val process = processBuilder.start()
+        val exitCode = process.waitFor()
+        val errorOutput = process.errorStream.bufferedReader().readText()
+
+        return if (exitCode == 0) {
+            CompileResult(true, outputDir.absolutePath, null, null)
+        } else {
+            CompileResult(false, null, null, errorOutput)
+        }
+    }
+
+    /**
+     * Kotlin 파일 컴파일
+     */
+    private fun compileKotlin(sourceFile: File, outputDir: File, kotlinCompilerPath: String): CompileResult {
+        if (kotlinCompilerPath.isEmpty()) {
+            return CompileResult(false, null, null, "Kotlin 컴파일러 경로가 설정되지 않았습니다.")
+        }
+
+        val processBuilder = ProcessBuilder(
+            kotlinCompilerPath,
+            "-d", outputDir.absolutePath,
+            sourceFile.absolutePath
+        )
+
+        val process = processBuilder.start()
+        val exitCode = process.waitFor()
+        val errorOutput = process.errorStream.bufferedReader().readText()
+
+        return if (exitCode == 0) {
+            CompileResult(true, outputDir.absolutePath, null, null)
+        } else {
+            CompileResult(false, null, null, errorOutput)
+        }
+    }
+
+    /**
+     * IntelliJ 내부 API를 사용한 컴파일
+     */
+    private fun compileWithIntelliJ(project: Project, file: VirtualFile): CompletableFuture<CompileResult> {
         val future = CompletableFuture<CompileResult>()
 
         ApplicationManager.getApplication().invokeLater {
@@ -74,6 +190,7 @@ object CodeExecutorService {
      * 컴파일된 클래스 실행
      */
     fun execute(
+        project: Project,
         outputPath: String,
         className: String,
         input: String,
@@ -82,7 +199,29 @@ object CodeExecutorService {
         val startTime = System.currentTimeMillis()
 
         try {
-            val processBuilder = ProcessBuilder("java", "-cp", outputPath, className)
+            val settings = JvmBaekjoonSettings.getInstance()
+            val jdkPath = settings.state.jdkPath
+
+            // JDK 경로 결정: 설정 > 프로젝트 SDK > 시스템 java 순서
+            val javaCommand = when {
+                jdkPath.isNotEmpty() -> Paths.get(jdkPath, "bin", "java").toString()
+                else -> {
+                    // 프로젝트 SDK 사용
+                    val projectSdk = ProjectRootManager.getInstance(project).projectSdk
+                    if (projectSdk != null) {
+                        val sdkHome = projectSdk.homePath
+                        if (sdkHome != null) {
+                            Paths.get(sdkHome, "bin", "java").toString()
+                        } else {
+                            "java"
+                        }
+                    } else {
+                        "java"
+                    }
+                }
+            }
+
+            val processBuilder = ProcessBuilder(javaCommand, "-cp", outputPath, className)
                 .redirectErrorStream(false)
 
             val process = processBuilder.start()
