@@ -129,6 +129,8 @@ object BojTestService {
                             // 오답이면 실제 출력 표시
                             if (!passed && !result.timedOut) {
                                 console.print("$actualOutput\n\n", ConsoleViewContentType.ERROR_OUTPUT)
+                            }else{
+                                console.print("$actualOutput\n\n", ConsoleViewContentType.NORMAL_OUTPUT)
                             }
 
                             if (result.error.isNotEmpty()) {
@@ -144,7 +146,7 @@ object BojTestService {
                             actualOutput = actualOutput,
                             executionTimeMs = result.executionTimeMs,
                             timedOut = result.timedOut,
-                            error = if (result.error.isNotEmpty()) result.error else null
+                            error = result.error.ifEmpty { null }
                         )
 
                         results.add(testResult)
@@ -218,8 +220,11 @@ object BojTestService {
                 console.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", ConsoleViewContentType.NORMAL_OUTPUT)
 
                 // 오답이면 실제 출력 표시
+
                 if (!passed && !result.timedOut) {
                     console.print("$actualOutput\n\n", ConsoleViewContentType.ERROR_OUTPUT)
+                }else{
+                    console.print("$actualOutput\n\n", ConsoleViewContentType.NORMAL_OUTPUT)
                 }
 
                 // 에러가 있으면 표시
