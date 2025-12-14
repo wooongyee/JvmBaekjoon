@@ -36,6 +36,15 @@ dependencies {
 
     implementation(libs.okhttp)
     implementation(libs.jsoup)
+
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockk)
+    testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 intellijPlatform {

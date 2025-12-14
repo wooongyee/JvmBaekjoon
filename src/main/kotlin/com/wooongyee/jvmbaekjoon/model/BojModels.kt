@@ -40,3 +40,37 @@ data class ProblemSearchResult(
     val number: String,
     val title: String
 )
+
+/**
+ * 컴파일 결과
+ */
+data class CompileResult(
+    val success: Boolean,
+    val outputPath: String?,
+    val className: String?,
+    val error: String?
+)
+
+/**
+ * 실행 결과
+ */
+data class ExecutionResult(
+    val output: String,
+    val error: String,
+    val executionTimeMs: Long,
+    val exitCode: Int,
+    val timedOut: Boolean
+)
+
+/**
+ * 테스트 결과
+ */
+data class TestResult(
+    val testCaseIndex: Int,
+    val passed: Boolean,
+    val expectedOutput: String,
+    val actualOutput: String,
+    val executionTimeMs: Long,
+    val timedOut: Boolean = false,
+    val error: String? = null
+)
