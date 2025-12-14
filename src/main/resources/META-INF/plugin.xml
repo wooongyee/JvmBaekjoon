@@ -22,6 +22,14 @@
                 anchor="right"
                 icon="AllIcons.Actions.Execute"
                 factoryClass="com.wooongyee.jvmbaekjoon.toolWindow.BojToolWindowFactory"/>
+
+        <!-- Settings -->
+        <applicationService serviceImplementation="com.wooongyee.jvmbaekjoon.settings.JvmBaekjoonSettings"/>
+        <applicationConfigurable
+                parentId="tools"
+                instance="com.wooongyee.jvmbaekjoon.settings.JvmBaekjoonConfigurable"
+                id="com.wooongyee.jvmbaekjoon.settings.JvmBaekjoonConfigurable"
+                displayName="JvmBaekjoon"/>
     </extensions>
 
     <actions>
