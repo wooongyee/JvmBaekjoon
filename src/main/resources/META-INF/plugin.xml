@@ -20,7 +20,7 @@
         <toolWindow
                 id="JvmBaekjoon"
                 anchor="right"
-                icon="AllIcons.Actions.Execute"
+                icon="AllIcons.Actions.Lightning"
                 factoryClass="com.wooongyee.jvmbaekjoon.toolWindow.BojToolWindowFactory"/>
 
         <!-- Settings -->
@@ -33,25 +33,18 @@
     </extensions>
 
     <actions>
-        <!-- 메뉴/우클릭용 액션 (단축키 없음) -->
+        <!-- Run JvmBaekjoon Test 액션 (메뉴/우클릭/단축키 통합) -->
         <action id="com.wooongyee.jvmbaekjoon.RunTest"
                 class="com.wooongyee.jvmbaekjoon.actions.RunTestAction"
-                text="Run BOJ Test"
-                description="Run Baekjoon Online Judge test"
-                icon="AllIcons.Actions.Execute">
+                text="Run JvmBaekjoon Test"
+                description="백준 온라인 저지 테스트 케이스 실행"
+                icon="AllIcons.Actions.Lightning">
 
             <add-to-group group-id="ToolsMenu" anchor="first"/>
             <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="RunClass"/>
             <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="RunClass"/>
-        </action>
 
-        <!-- 에디터 단축키 전용 액션 -->
-        <action id="com.wooongyee.jvmbaekjoon.RunTestEditor"
-                class="com.wooongyee.jvmbaekjoon.actions.RunTestEditorAction"
-                text="Run BOJ Test"
-                description="Run Baekjoon Online Judge test (Keyboard Shortcut)">
-
-            <!-- 에디터 포커스 시에만 작동하는 단축키 -->
+            <!-- 단축키 -->
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta shift J"/>
             <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta shift J"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift J"/>
