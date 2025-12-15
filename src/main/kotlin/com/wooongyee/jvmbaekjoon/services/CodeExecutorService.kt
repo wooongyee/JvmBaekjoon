@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit
 
 object CodeExecutorService {
 
-    private const val DEFAULT_TIMEOUT_MS = 2000L
+    private const val DEFAULT_TIMEOUT_MS = 10000L
     private const val MAX_OUTPUT_LENGTH = 10000
 
     /**
