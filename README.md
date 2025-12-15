@@ -52,7 +52,7 @@ JvmBaekjoon은 백준 온라인 저지(BOJ) 문제를 IntelliJ IDEA에서 편리
 
 ### 방법 1: GitHub Release에서 다운로드 (권장)
 
-1. [Releases 페이지](https://github.com/yourusername/JvmBaekjoon/releases)에서 최신 버전의 `.zip` 파일 다운로드
+1. [Releases 페이지](https://github.com/wooongyee/JvmBaekjoon/releases)에서 최신 버전의 `.zip` 파일 다운로드
 2. IntelliJ IDEA 실행
 3. `File` → `Settings` (macOS: `Preferences`) → `Plugins`
 4. 톱니바퀴 아이콘 ⚙️ → `Install Plugin from Disk...`
@@ -178,5 +178,3 @@ MIT License - 자세한 내용은 [LICENSE](LICENSE) 파일 참조
 문제가 발생하거나 제안사항이 있으시면 [Issues](https://github.com/yourusername/JvmBaekjoon/issues)에 등록해주세요.
 
 ---
-
-**Made with ❤️ for competitive programmers**
