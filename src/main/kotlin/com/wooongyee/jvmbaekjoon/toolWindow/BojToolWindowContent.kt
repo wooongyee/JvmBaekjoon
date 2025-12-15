@@ -268,7 +268,7 @@ class BojToolWindowContent(private val project: Project) {
             }
 
             row {
-                cell(createFormattedTextPane(problem.description))
+                cell(createHtmlPane(problem.description))
                     .align(Align.FILL)
             }.topGap(TopGap.SMALL)
 
@@ -286,7 +286,7 @@ class BojToolWindowContent(private val project: Project) {
             }
 
             row {
-                cell(createFormattedTextPane(problem.input))
+                cell(createHtmlPane(problem.input))
                     .align(Align.FILL)
             }.topGap(TopGap.SMALL)
 
@@ -304,9 +304,29 @@ class BojToolWindowContent(private val project: Project) {
             }
 
             row {
-                cell(createFormattedTextPane(problem.output))
+                cell(createHtmlPane(problem.output))
                     .align(Align.FILL)
             }.topGap(TopGap.SMALL)
+
+            // 제한 (있는 경우에만)
+            problem.limit?.let { limitHtml ->
+                row {
+                    label("제한")
+                        .bold()
+                        .applyToComponent {
+                            font = font.deriveFont(Font.BOLD, 14f)
+                        }
+                }.topGap(TopGap.MEDIUM)
+
+                row {
+                    panel { separator() }
+                }
+
+                row {
+                    cell(createHtmlPane(limitHtml))
+                        .align(Align.FILL)
+                }.topGap(TopGap.SMALL)
+            }
 
             // 테스트 케이스
             if (problem.testCases.isNotEmpty()) {
@@ -374,15 +394,31 @@ class BojToolWindowContent(private val project: Project) {
         }
     }
 
-    private fun createFormattedTextPane(text: String): JTextArea {
-        return JTextArea(text).apply {
+    /**
+     * HTML 렌더링 패널 생성 (이미지 포함)
+     */
+    private fun createHtmlPane(html: String): JComponent {
+        val editorPane = JEditorPane("text/html", html).apply {
             isEditable = false
-            lineWrap = true
-            wrapStyleWord = false
             background = JBColor.background()
-            border = JBUI.Borders.empty(5, 0, 5, 0)
             isOpaque = false
+
+            // 하이퍼링크 비활성화
+            putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true)
+
+            // 폰트 설정
             font = Font(Font.SANS_SERIF, Font.PLAIN, 13)
+        }
+
+        // JScrollPane으로 감싸서 가로 스크롤 방지
+        return JBScrollPane(editorPane).apply {
+            border = JBUI.Borders.empty()  // 공백 제거
+            horizontalScrollBarPolicy = JBScrollPane.HORIZONTAL_SCROLLBAR_NEVER
+            verticalScrollBarPolicy = JBScrollPane.VERTICAL_SCROLLBAR_NEVER
+
+            // 크기 제약 제거 - 내용에 맞춰 자동으로 늘어나도록
+            minimumSize = Dimension(0, 0)
+            maximumSize = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)
         }
     }
 
