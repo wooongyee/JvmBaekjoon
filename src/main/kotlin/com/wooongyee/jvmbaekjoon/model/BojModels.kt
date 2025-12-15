@@ -10,7 +10,9 @@ data class BojProblem(
     val input: String,
     val output: String,
     val testCases: List<TestCase>,
-    val stats: ProblemStats
+    val stats: ProblemStats,
+    val images: List<ImageInfo>? = null,  // 문제 본문의 이미지
+    val limit: String? = null  // 제한 섹션 (있는 경우)
 )
 
 /**
@@ -18,7 +20,9 @@ data class BojProblem(
  */
 data class TestCase(
     val input: String,
-    val output: String
+    val output: String,
+    val explanation: String? = null,  // 예제 추가 설명
+    val images: List<ImageInfo>? = null  // 이미지 정보
 )
 
 /**
@@ -73,4 +77,13 @@ data class TestResult(
     val executionTimeMs: Long,
     val timedOut: Boolean = false,
     val error: String? = null
+)
+
+/**
+ * 이미지 정보
+ */
+data class ImageInfo(
+    val url: String,           // 원본 URL
+    val localPath: String?,    // 로컬 다운로드 경로
+    val alt: String? = null    // 대체 텍스트
 )
