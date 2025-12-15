@@ -23,6 +23,15 @@ object BojTestService {
     private var consoleView: ConsoleView? = null
 
     /**
+     * 출력 비교 시 각 줄의 trailing whitespace를 무시
+     */
+    private fun normalizeOutput(output: String): String {
+        return output.lines()
+            .joinToString("\n") { it.trimEnd() }
+            .trim()
+    }
+
+    /**
      * BOJ 테스트 실행 (모든 테스트케이스)
      */
     fun runTest(project: Project, file: VirtualFile) {
@@ -30,7 +39,7 @@ object BojTestService {
             Messages.showMessageDialog(
                 project,
                 "Kotlin 또는 Java 파일만 실행할 수 있습니다.",
-                "Run BOJ Test",
+                "Run JvmBaekjoon Test",
                 Messages.getWarningIcon()
             )
             return
@@ -46,7 +55,7 @@ object BojTestService {
             Messages.showMessageDialog(
                 project,
                 "테스트케이스가 없습니다.\n먼저 BOJ 문제를 검색해주세요.",
-                "Run BOJ Test",
+                "Run JvmBaekjoon Test",
                 Messages.getWarningIcon()
             )
             return
@@ -67,7 +76,7 @@ object BojTestService {
             Messages.showMessageDialog(
                 project,
                 "Kotlin 또는 Java 파일만 실행할 수 있습니다.",
-                "Run BOJ Test",
+                "Run JvmBaekjoon Test",
                 Messages.getWarningIcon()
             )
             return
@@ -100,8 +109,8 @@ object BojTestService {
                             input = testCase.input
                         )
 
-                        val actualOutput = result.output.trim()
-                        val expectedOutput = testCase.output.trim()
+                        val actualOutput = normalizeOutput(result.output)
+                        val expectedOutput = normalizeOutput(testCase.output)
                         val passed = actualOutput == expectedOutput && !result.timedOut
 
                         ApplicationManager.getApplication().invokeLater {
@@ -169,7 +178,7 @@ object BojTestService {
             Messages.showMessageDialog(
                 project,
                 "Kotlin 또는 Java 파일만 실행할 수 있습니다.",
-                "Run BOJ Test",
+                "Run JvmBaekjoon Test",
                 Messages.getWarningIcon()
             )
             return
@@ -194,8 +203,8 @@ object BojTestService {
                     input = testCase.input
                 )
 
-                val actualOutput = result.output.trim()
-                val expectedOutput = testCase.output.trim()
+                val actualOutput = normalizeOutput(result.output)
+                val expectedOutput = normalizeOutput(testCase.output)
                 val passed = actualOutput == expectedOutput && !result.timedOut
 
                 // 결과 및 실행 시간 먼저 표시
